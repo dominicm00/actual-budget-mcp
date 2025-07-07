@@ -18,10 +18,20 @@ A personal budget MCP (Model Context Protocol) server with HTTP transport for ac
 npm install
 ```
 
-### Build
+### Environment Setup
 
+1. Copy the example environment file:
 ```bash
-npm run build
+cp .env.example .env
+```
+
+2. Edit `.env` with your Actual Budget credentials:
+```env
+ACTUAL_URL=https://your-actual-server.com
+ACTUAL_PASSWORD=your-server-password
+BUDGET_ID=your-budget-id
+BUDGET_PASSWORD=your-budget-password
+PORT=8080
 ```
 
 ### Run
@@ -38,11 +48,16 @@ The server will start on port 8080 by default. You can change this by setting th
 npm run dev
 ```
 
+### Testing
+
+```bash
+npm test
+```
+
 ## API Endpoints
 
 - **MCP Endpoint**: `POST /mcp` - Main MCP protocol endpoint
 - **Health Check**: `GET /health` - Server health status
-- **Server Info**: `GET /mcp` - Server capabilities and information
 
 ## MCP Tools
 
@@ -57,7 +72,7 @@ Returns all transactions that haven't been assigned to a category.
 
 Returns all available budget categories.
 
-**Input**: None  
+**Input**: None
 **Output**: Array of category objects
 
 ### categorize_transactions
@@ -112,15 +127,13 @@ curl -X POST http://localhost:8080/mcp \
 
 ## Data Structure
 
-### Transaction
+### UncategorizedTransaction
 ```typescript
-interface Transaction {
+interface UncategorizedTransaction {
   id: string;
-  amount: number;
-  description: string;
-  date: string;
-  category?: string;
-  account: string;
+  payeeName: string;
+  notes: string;
+  amount: number; // In cents, negative = expense, positive = deposit
 }
 ```
 
@@ -129,19 +142,22 @@ interface Transaction {
 interface Category {
   id: string;
   name: string;
-  color?: string;
-  groupName?: string;
+  groupName: string;
+}
+```
+
+### Categorization
+```typescript
+interface Categorization {
+  transactionId: string;
+  categoryId: string;
 }
 ```
 
 ## Environment Variables
 
+- `ACTUAL_URL`: Your Actual Budget server URL
+- `ACTUAL_PASSWORD`: Password for your Actual Budget server
+- `BUDGET_ID`: ID of the specific budget to access
+- `BUDGET_PASSWORD`: Password for the specific budget
 - `PORT`: Server port (default: 8080)
-
-## Development
-
-This server uses stubbed data for development and testing. In a production environment, you would replace the `BudgetService` with actual database connections to your budget application.
-
-## License
-
-MIT
