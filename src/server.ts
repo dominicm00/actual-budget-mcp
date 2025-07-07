@@ -14,9 +14,12 @@ export function createBudgetMcpServer(): McpServer {
       title: "Get Uncategorized Transactions",
       description:
         "Retrieve all transactions that have not been assigned to a category",
+      annotations: {
+        readOnlyHint: true,
+      },
     },
     async () => {
-      const transactions = budgetService.getUncategorizedTransactions();
+      const transactions = await budgetService.getUncategorizedTransactions();
       return {
         content: [
           {
@@ -35,7 +38,7 @@ export function createBudgetMcpServer(): McpServer {
       description: "Retrieve all defined budget categories",
     },
     async () => {
-      const categories = budgetService.getCategories();
+      const categories = await budgetService.getCategories();
       return {
         content: [
           {
@@ -47,28 +50,46 @@ export function createBudgetMcpServer(): McpServer {
     },
   );
 
-  // server.registerTool(
-  //   "categorize_transactions",
-  //   {
-  //     title: "Categorize Transactions",
-  //     description: "Assign categories to multiple transactions",
-  //     inputSchema: {
-  //       categorizations: z.array(z.object({
-  //         transactionId: z.string(),
-  //         categoryId: z.string()
-  //       }))
-  //     }
-  //   },
-  //   async ({ categorizations }) => {
-  //     const result = budgetService.categorizeTransactions(categorizations);
-  //     return {
-  //       content: [{
-  //         type: "text",
-  //         text: JSON.stringify(result, null, 2)
-  //       }]
-  //     };
-  //   }
-  // );
+  server.registerTool(
+    "categorize_transactions",
+    {
+      title: "Categorize Transactions",
+      description: "Assign categories to multiple transactions",
+      inputSchema: {
+        categorizations: z
+          .array(
+            z.object({
+              transactionId: z.string(),
+              categoryId: z.string(),
+            }),
+          )
+          .describe("List of transaction-category pairs"),
+      },
+      outputSchema: {
+        failedCategorizations: z
+          .array(
+            z.object({
+              transactionId: z.string(),
+              categoryId: z.string(),
+            }),
+          )
+          .describe("List of failed categorizations"),
+      },
+    },
+    async ({ categorizations }) => {
+      const result =
+        await budgetService.categorizeTransactions(categorizations);
+      return {
+        structuredContent: result,
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result, null, 2),
+          },
+        ],
+      };
+    },
+  );
 
   return server;
 }

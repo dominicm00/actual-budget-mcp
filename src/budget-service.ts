@@ -3,12 +3,12 @@ import fs from "node:fs/promises";
 
 type UncategorizedTransaction = {
   id: string;
+  payeeName: string;
+  notes: string;
 
   /**
-   * Payee
+   * Transaction amount in cents. Negative indicates an expense, positive indicates a deposit.
    */
-  importedPayee: string;
-  notes: string;
   amount: number;
 };
 
@@ -16,12 +16,29 @@ type Category = {
   id: string;
   name: string;
   groupName: string;
+};
 
-  /**
-   * Whether or not transactions within this category are
-   * displayed as income or expenses
-   */
-  isIncome: boolean;
+type Categorization = {
+  transactionId: string;
+  categoryId: string;
+};
+
+type CategoryApiResponse = {
+  data: {
+    id: string;
+    name: string;
+    "group.name": string;
+  }[];
+};
+
+type UncategorizedTransactionApiResponse = {
+  data: {
+    id: string;
+    "payee.name": string;
+    imported_payee: string;
+    notes: string;
+    amount: number;
+  }[];
 };
 
 export class BudgetService {
@@ -51,21 +68,15 @@ export class BudgetService {
     await api.sync();
 
     const result = (await api.aqlQuery(
-      api.q("categories").select(["id", "name", "group.name", "is_income"]),
-    )) as {
-      data: {
-        id: string;
-        name: string;
-        "group.name": string;
-        is_income: boolean;
-      }[];
-    };
+      api.q("categories").select(["id", "name", "group.name"]),
+    )) as CategoryApiResponse;
+
+    console.log(`Fetched ${result.data.length} categories`);
 
     return result.data.map((category) => ({
       id: category.id,
       name: category.name,
       groupName: category["group.name"],
-      isIncome: category.is_income,
     }));
   }
 
@@ -77,10 +88,47 @@ export class BudgetService {
       api
         .q("transactions")
         .filter({ category: null })
-        .select(["id", "imported_payee", "notes", "amount"]),
-    )) as { data: UncategorizedTransaction[] };
-    return result.data;
+        .select(["id", "payee.name", "notes", "amount"]),
+    )) as UncategorizedTransactionApiResponse;
+
+    console.log(`Fetched ${result.data.length} uncategorized transactions`);
+
+    return result.data.map((transaction) => ({
+      id: transaction.id,
+      payeeName: transaction["payee.name"],
+      notes: transaction.notes,
+      amount: transaction.amount,
+    }));
+  }
+
+  async categorizeTransactions(categorizations: Categorization[]): Promise<{
+    failedCategorizations: Categorization[];
+  }> {
+    const failedCategorizations: Categorization[] = [];
+
+    await api.batchBudgetUpdates(async () => {
+      const results = await Promise.allSettled(
+        categorizations.map(({ transactionId, categoryId }) =>
+          api.updateTransaction(transactionId, { category: categoryId }),
+        ),
+      );
+
+      results.forEach((result, index) => {
+        if (result.status === "rejected") {
+          failedCategorizations.push(categorizations[index]);
+        }
+      });
+    });
+
+    console.log(
+      `Updated ${categorizations.length - failedCategorizations.length} transactions successfully, ${failedCategorizations.length} failed`,
+    );
+
+    return {
+      failedCategorizations,
+    };
   }
 }
 
 export const budgetService = new BudgetService();
+await budgetService.initialize();

@@ -17,7 +17,8 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "erasableSyntaxOnly": true,
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
+    "noEmit": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
