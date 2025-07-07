@@ -5,9 +5,12 @@
   "main": "src/index.ts",
   "type": "module",
   "scripts": {
-    "start": "node --env-file=.env src/index.ts",
-    "dev": "node --env-file=.env --watch src/index.ts",
-    "test": "node --env-file=.env --test"
+    "start": "node --env-file-if-exists=.env src/index.ts",
+    "dev": "node --env-file-if-exists=.env --watch src/index.ts",
+    "test": "node --env-file-if-exists=.env --test",
+    "docker:build": "docker build -t actual-budget-mcp:latest .",
+    "docker:run": "docker run -p 8080:8080 --env-file .env actual-budget-mcp:latest",
+    "docker:dev": "docker run -p 8080:8080 --env-file .env -v $(pwd)/src:/app/src:ro actual-budget-mcp:latest"
   },
   "keywords": [
     "mcp",

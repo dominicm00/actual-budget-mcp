@@ -42,6 +42,8 @@ type UncategorizedTransactionApiResponse = {
 };
 
 export class BudgetService {
+  private initialized = false;
+
   async initialize() {
     await fs.mkdir("/tmp/actual-mcp-data", { recursive: true });
 
@@ -57,13 +59,28 @@ export class BudgetService {
     await api.downloadBudget(process.env.BUDGET_ID, {
       password: process.env.BUDGET_PASSWORD,
     });
+
+    this.initialized = true;
+  }
+
+  private async ensureCacheExists(): Promise<void> {
+    try {
+      await fs.access("/tmp/actual-mcp-data");
+    } catch {
+      console.log("Cache directory missing, reinitializing...");
+      this.initialized = false;
+      await this.initialize();
+    }
   }
 
   async reset() {
     await fs.rm("/tmp/actual-mcp-data", { recursive: true });
+    this.initialized = false;
   }
 
   async getCategories(): Promise<Category[]> {
+    await this.ensureCacheExists();
+    
     // Fetch remote updates
     await api.sync();
 
@@ -81,6 +98,8 @@ export class BudgetService {
   }
 
   async getUncategorizedTransactions(): Promise<UncategorizedTransaction[]> {
+    await this.ensureCacheExists();
+    
     // Fetch remote updates
     await api.sync();
 
@@ -104,6 +123,8 @@ export class BudgetService {
   async categorizeTransactions(categorizations: Categorization[]): Promise<{
     failedCategorizations: Categorization[];
   }> {
+    await this.ensureCacheExists();
+    
     const failedCategorizations: Categorization[] = [];
 
     await api.batchBudgetUpdates(async () => {

@@ -2,10 +2,16 @@
 
 A personal budget MCP (Model Context Protocol) server with HTTP transport for accessing budget information remotely.
 
+## Disclaimer
+
+This is for my personal use, and only includes the tools that help my workflow. There is currently no attempt to make this usable for anyone else, although you are free to adapt any code in this repo.
+
+You **must** run this behind an OAuth2 reverse proxy (e.g. [Authelia](https://www.authelia.com/)).
+
 ## Features
 
 - **Remote HTTP Transport**: Uses streamable HTTP transport for remote access
-- **Three Core Tools**:
+- **Tools**:
   - `get_uncategorized_transactions`: Retrieve all uncategorized transactions
   - `get_categories`: Get all defined budget categories
   - `categorize_transactions`: Assign categories to multiple transactions

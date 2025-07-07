@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import { randomUUID } from "node:crypto";
+import fs from "node:fs/promises";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { createBudgetMcpServer } from "./server.ts";
@@ -122,8 +123,24 @@ app.get("/mcp", handleSessionRequest);
 app.delete("/mcp", handleSessionRequest);
 
 // Health check endpoint
-app.get("/health", (req, res) => {
-  res.json({ status: "healthy", timestamp: new Date().toISOString() });
+app.get("/health", async (req, res) => {
+  try {
+    // Check if cache directory exists
+    await fs.access("/tmp/actual-mcp-data");
+
+    res.json({
+      status: "healthy",
+      timestamp: new Date().toISOString(),
+      cache: "available",
+    });
+  } catch (error) {
+    res.status(503).json({
+      status: "unhealthy",
+      timestamp: new Date().toISOString(),
+      cache: "missing",
+      error: "Cache directory not found",
+    });
+  }
 });
 
 app.listen(PORT, () => {
