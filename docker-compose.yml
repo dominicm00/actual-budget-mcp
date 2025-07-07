@@ -1,13 +1,9 @@
-version: "3.8"
-
 services:
   actual-budget-mcp:
     build: .
     container_name: actual-budget-mcp
     env_file:
       - stack.env
-    ports:
-      - "8080:8080"
     environment:
       - NODE_ENV=production
     restart: unless-stopped
@@ -25,11 +21,9 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-    # Optional: Add network configuration if connecting to Actual Budget on same network
     networks:
-      - actual
+      - web
 
-# Optional: Define network if needed
 networks:
-  actual:
-    name: actual
+  web:
+    name: web
