@@ -1,32 +1,38 @@
-# Use Node.js 24 Alpine image for smaller size
-FROM node:24-alpine
+# syntax=docker/dockerfile:1
 
-# Install dumb-init for proper signal handling
-RUN apk add --no-cache dumb-init
+# Comments are provided throughout this file to help you get started.
+# If you need more help, visit the Dockerfile reference guide at
+# https://docs.docker.com/go/dockerfile-reference/
 
-# Create app directory
-WORKDIR /app
+# Want to help us make this template better? Share your feedback here: https://forms.gle/ybq9Krt8jtBL3iCk7
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
+ARG NODE_VERSION=24
 
-# Copy package files
-COPY package*.json ./
+FROM node:${NODE_VERSION}
 
-# Install production dependencies
-RUN npm ci --only=production && npm cache clean --force
+# Use production node environment by default.
+ENV NODE_ENV production
 
-# Copy application source
-COPY --chown=nodejs:nodejs src/ ./src/
 
-# Switch to non-root user
-USER nodejs
+WORKDIR /usr/src/app
 
-# Expose port
+# Download dependencies as a separate step to take advantage of Docker's caching.
+# Leverage a cache mount to /root/.npm to speed up subsequent builds.
+# Leverage a bind mounts to package.json and package-lock.json to avoid having to copy them into
+# into this layer.
+RUN --mount=type=bind,source=package.json,target=package.json \
+    --mount=type=bind,source=package-lock.json,target=package-lock.json \
+    --mount=type=cache,target=/root/.npm \
+    npm ci --omit=dev
+
+# Run the application as a non-root user.
+USER node
+
+# Copy the rest of the source files into the image.
+COPY --chown=node:node . .
+
+# Expose the port that the application listens on.
 EXPOSE 8080
 
-# Use dumb-init to handle signals properly
-ENTRYPOINT ["dumb-init", "--"]
-
-# Start the application
-CMD ["node", "--env-file=.env", "src/index.ts"]
+# Run the application.
+CMD node src/index.ts
