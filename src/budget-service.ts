@@ -97,27 +97,58 @@ export class BudgetService {
     }));
   }
 
-  async getUncategorizedTransactions(): Promise<UncategorizedTransaction[]> {
+  async getUncategorizedTransactions(limit: number = 100, offset: number = 0): Promise<{
+    transactions: UncategorizedTransaction[];
+    pagination: {
+      limit: number;
+      offset: number;
+      total: number;
+      hasMore: boolean;
+    };
+  }> {
     await this.ensureCacheExists();
     
     // Fetch remote updates
     await api.sync();
 
+    // First, get the total count
+    const countResult = (await api.aqlQuery(
+      api
+        .q("transactions")
+        .filter({ category: null })
+        .calculate({ $count: "id" }),
+    )) as { data: number };
+
+    const total = countResult.data;
+
+    // Then get the paginated results
     const result = (await api.aqlQuery(
       api
         .q("transactions")
         .filter({ category: null })
-        .select(["id", "payee.name", "notes", "amount"]),
+        .select(["id", "payee.name", "notes", "amount"])
+        .limit(limit)
+        .offset(offset),
     )) as UncategorizedTransactionApiResponse;
 
-    console.log(`Fetched ${result.data.length} uncategorized transactions`);
+    console.log(`Fetched ${result.data.length} of ${total} uncategorized transactions (limit: ${limit}, offset: ${offset})`);
 
-    return result.data.map((transaction) => ({
+    const transactions = result.data.map((transaction) => ({
       id: transaction.id,
       payeeName: transaction["payee.name"],
       notes: transaction.notes,
       amount: transaction.amount,
     }));
+
+    return {
+      transactions,
+      pagination: {
+        limit,
+        offset,
+        total,
+        hasMore: offset + limit < total,
+      },
+    };
   }
 
   async categorizeTransactions(categorizations: Categorization[]): Promise<{

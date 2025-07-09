@@ -13,18 +13,36 @@ export function createBudgetMcpServer(): McpServer {
     {
       title: "Get Uncategorized Transactions",
       description:
-        "Retrieve all transactions that have not been assigned to a category",
+        "Retrieve transactions that have not been assigned to a category. Supports pagination with limit and offset parameters.",
       annotations: {
         readOnlyHint: true,
       },
+      inputSchema: {
+        limit: z
+          .number()
+          .min(1)
+          .max(1000)
+          .default(100)
+          .describe(
+            "Maximum number of transactions to return (1-1000, default: 100)",
+          ),
+        offset: z
+          .number()
+          .min(0)
+          .default(0)
+          .describe("Number of transactions to skip (default: 0)"),
+      },
     },
-    async () => {
-      const transactions = await budgetService.getUncategorizedTransactions();
+    async ({ limit, offset }) => {
+      const result = await budgetService.getUncategorizedTransactions(
+        limit,
+        offset,
+      );
       return {
         content: [
           {
             type: "text",
-            text: JSON.stringify(transactions, null, 2),
+            text: JSON.stringify(result, null, 2),
           },
         ],
       };
