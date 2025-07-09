@@ -122,7 +122,11 @@ export class BudgetService {
     const countResult = (await api.aqlQuery(
       api
         .q("transactions")
-        .filter({ category: null, "account.offbudget": false })
+        .filter({
+          category: null,
+          "account.offbudget": false,
+          transfer_id: null,
+        })
         .calculate({ $count: "id" }),
     )) as { data: number };
 
@@ -132,7 +136,11 @@ export class BudgetService {
     const result = (await api.aqlQuery(
       api
         .q("transactions")
-        .filter({ category: null, "account.offbudget": false })
+        .filter({
+          category: null,
+          "account.offbudget": false,
+          transfer_id: null,
+        })
         .select(["id", "payee.name", "notes", "amount"])
         .limit(limit)
         .offset(offset),
