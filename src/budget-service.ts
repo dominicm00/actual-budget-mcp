@@ -80,7 +80,7 @@ export class BudgetService {
 
   async getCategories(): Promise<Category[]> {
     await this.ensureCacheExists();
-    
+
     // Fetch remote updates
     await api.sync();
 
@@ -97,7 +97,10 @@ export class BudgetService {
     }));
   }
 
-  async getUncategorizedTransactions(limit: number = 100, offset: number = 0): Promise<{
+  async getUncategorizedTransactions(
+    limit: number = 100,
+    offset: number = 0,
+  ): Promise<{
     transactions: UncategorizedTransaction[];
     pagination: {
       limit: number;
@@ -107,15 +110,19 @@ export class BudgetService {
     };
   }> {
     await this.ensureCacheExists();
-    
+
     // Fetch remote updates
     await api.sync();
+
+    const testing = await api.aqlQuery(
+      api.q("transactions").select(["account.*"]).limit(1),
+    );
 
     // First, get the total count
     const countResult = (await api.aqlQuery(
       api
         .q("transactions")
-        .filter({ category: null })
+        .filter({ category: null, "account.offbudget": false })
         .calculate({ $count: "id" }),
     )) as { data: number };
 
@@ -125,13 +132,15 @@ export class BudgetService {
     const result = (await api.aqlQuery(
       api
         .q("transactions")
-        .filter({ category: null })
+        .filter({ category: null, "account.offbudget": false })
         .select(["id", "payee.name", "notes", "amount"])
         .limit(limit)
         .offset(offset),
     )) as UncategorizedTransactionApiResponse;
 
-    console.log(`Fetched ${result.data.length} of ${total} uncategorized transactions (limit: ${limit}, offset: ${offset})`);
+    console.log(
+      `Fetched ${result.data.length} of ${total} uncategorized transactions (limit: ${limit}, offset: ${offset})`,
+    );
 
     const transactions = result.data.map((transaction) => ({
       id: transaction.id,
@@ -155,7 +164,7 @@ export class BudgetService {
     failedCategorizations: Categorization[];
   }> {
     await this.ensureCacheExists();
-    
+
     const failedCategorizations: Categorization[] = [];
 
     await api.batchBudgetUpdates(async () => {

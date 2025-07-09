@@ -54,6 +54,9 @@ export function createBudgetMcpServer(): McpServer {
     {
       title: "Get Budget Categories",
       description: "Retrieve all defined budget categories",
+      annotations: {
+        readOnlyHint: true,
+      },
     },
     async () => {
       const categories = await budgetService.getCategories();
